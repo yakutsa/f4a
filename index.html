@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="style.css" rel="stylesheet" type="text/css">
+  <link href="https://fonts.googleapis.com/css?family=Nunito" rel="stylesheet" type="text/css">
+  <script src="jquery-1.10.2.js"></script>
+  <title>yakutsa.com  | F4J</title>
+</head>
+<body>
+  <div class="container">
+    <div class="intro">Foursquare API for ADYEN</div>
+    <div class="opt">First option<br /><br />
+      <span style="font-size:14px">First field is for City name, second field represents radius</span><br /><br />
+      <input id="location" type="text" name="fname" placeholder="City Name" />
+      <select id="options" placeholder="Radius">
+        <option class="radius" value="10">10</option>
+        <option class="radius" value="50">50</option>
+        <option class="radius" value="100">100</option>
+        <option class="radius" value="200">200</option>
+      </select>
+      <br>
+      <button class="search-button">Search</button>
+    </div>
+    <div class="opt">Second option<br /><br />
+      <span style="font-size:14px">Field represents radius</span><br />
+      <select id="options-gps">
+        <option class="radius" value="10">10</option>
+        <option class="radius" value="50">50</option>
+        <option class="radius" value="100">100</option>
+        <option class="radius" value="200">200</option>
+      </select>
+      <button class="gps-button">Use my GPS</button>
+    </div>
+    <div class="content">
+    </div>
+  </div>
+  <script>
+  var clientId = '3ST4R2V0ICCVPPNRXGH0AQKWBQQEPPGTH3ME0CFMJ3L4MU10';
+  var clientSecret = 'QCJOYFEM4WMJUXKULLRRNCGZB052YXOBV0U1KMIC0VIWY43O';
+  var version = '20170827';
+  var coords = {lat: "", lng: ""};
+
+
+  $('.gps-button').click(function() {
+    var $button = $(this);
+    $button.text('Loading...');
+    $button.attr('disabled', 'disabled'); 
+    $('.content').empty(); 
+
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position){
+          coords.lat = position.coords.latitude;
+          coords.lng = position.coords.longitude;
+
+          $.ajax({
+            method: 'GET',
+            url: 'https://api.foursquare.com/v2/venues/search?' +
+              'll=' + coords.lat + ',' + coords.lng +
+              '&client_id=' + clientId +
+              '&client_secret=' + clientSecret +
+              '&v=' + version +
+              '&radius=' + $('#options-gps :selected').val() 
+          }).done(function(data) {
+            data.response.venues.sort(function(a, b){
+              return b.stats.checkinsCount - a.stats.checkinsCount;
+            })
+            $.each(data.response.venues, function (key, item) {
+                console.log(item);
+                $('.content').append(
+                  '<div class="box">' +
+                      '<div class="title">' + item.name + '</div>' +
+                      '<div class="address">' +
+                        item.location.formattedAddress[0] + " " +
+                        item.location.formattedAddress[1] + " " +
+                        item.location.formattedAddress[2] +
+                      '</div>' +
+                      '<div class="checkinsCount"> CheckinsCount: ' +
+                        item.stats.checkinsCount +
+                      '</div>' +
+                  '</div>'
+                );
+            });
+
+          }).fail(function(data) {
+            $('.content').html(data);
+               console.log("bad request");
+          }).always(function(data) {
+            $button.text('Use my GPS'); 
+            $button.removeAttr('disabled'); 
+          });
+
+
+        });
+    } else { 
+        console.log('error');
+    }
+
+  });
+
+  $('.search-button').click(function() {
+    var $button = $(this);
+    $button.text('Loading...'); 
+    $button.attr('disabled', 'disabled'); 
+    $('.content').empty(); 
+
+    $.ajax({
+      method: 'GET',
+      url: 'https://api.foursquare.com/v2/venues/explore' +
+        '?client_id=' + clientId +
+        '&client_secret=' + clientSecret +
+        '&v=' + version +
+        '&near=' + $('#location').val() +
+        '&radius=' + $('#options :selected').val() 
+    }).done(function(data) {
+      console.log(data.response.groups[0]);
+      data.response.groups[0].items.sort(function(a, b){
+        return b.venue.stats.checkinsCount - a.venue.stats.checkinsCount;
+      })
+      $.each(data.response.groups[0].items, function(key, item) {
+        console.log(item);
+        $('.content').append(
+          '<div class="box">' +
+              '<div class="title">' + item.venue.name + '</div>' +
+              '<div class="address">' +
+                item.venue.location.formattedAddress[0] + " " +
+                item.venue.location.formattedAddress[1] + " " +
+                item.venue.location.formattedAddress[2] +
+              '</div>' +
+              '<div class="checkinsCount"> CheckinsCount: ' +
+              item.venue.stats.checkinsCount +
+              '</div>' +
+          '</div>'
+        );
+      });
+
+    }).fail(function(data) {
+      $('.content').html(data);
+    }).always(function(data) {
+      $button.text('Search'); 
+      $button.removeAttr('disabled'); 
+    });
+  });
+  </script>
+</body>
+</html>
